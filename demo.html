@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Attitude Indicator - Demo</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(145deg, #0d1117 0%, #161b22 50%, #1a1f29 100%);
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      color: #c9d1d9;
+      overflow-x: hidden;
+    }
+
+    #root {
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .header {
+      text-align: center;
+    }
+
+    .title {
+      color: #00ff88;
+      font-size: 28px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-shadow: 0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.2);
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-react { background: rgba(97, 218, 251, 0.2); color: #61dafb; border: 1px solid #61dafb40; }
+    .badge-canvas { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; border: 1px solid #ff6b6b40; }
+    .badge-realtime { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff8840; }
+
+    .gauge-wrapper {
+      position: relative;
+      border-radius: 50%;
+      box-shadow: 
+        0 0 60px rgba(0, 255, 136, 0.12),
+        0 20px 60px rgba(0, 0, 0, 0.8),
+        0 0 0 3px #2a2a2a,
+        0 0 0 6px #1a1a1a;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 20px;
+      background: rgba(22, 27, 34, 0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(48, 54, 61, 0.6);
+      backdrop-filter: blur(10px);
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .data-item {
+      text-align: center;
+    }
+
+    .data-label {
+      color: #8b949e;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .data-value {
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .data-value.green { color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
+    .data-value.cyan { color: #00d4ff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.3); }
+    .data-value.magenta { color: #ff00ff; text-shadow: 0 0 10px rgba(255, 0, 255, 0.3); }
+    .data-value.yellow { color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 20px;
+      background: rgba(22, 27, 34, 0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(48, 54, 61, 0.6);
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .controls-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .controls-title {
+      color: #8b949e;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .toggle-btn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: rgba(255, 100, 100, 0.2);
+      border: 1px solid #ff6464;
+      color: #ff6464;
+    }
+
+    .toggle-btn.inactive {
+      background: rgba(0, 255, 136, 0.2);
+      border: 1px solid #00ff88;
+      color: #00ff88;
+    }
+
+    .toggle-btn:hover {
+      filter: brightness(1.2);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-label {
+      color: #8b949e;
+      font-size: 11px;
+      text-transform: uppercase;
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .control-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: #30363d;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .control-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #00ff88;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+      transition: transform 0.1s;
+    }
+
+    .control-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .control-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #00ff88;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .control-value {
+      color: #00ff88;
+      font-size: 12px;
+      width: 70px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding: 20px;
+      text-align: center;
+      border-top: 1px solid rgba(48, 54, 61, 0.6);
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .footer-link {
+      color: #58a6ff;
+      text-decoration: none;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+
+    .github-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .mode-tab {
+      padding: 8px 16px;
+      background: rgba(48, 54, 61, 0.4);
+      border: 1px solid rgba(48, 54, 61, 0.6);
+      border-radius: 6px;
+      color: #8b949e;
+      font-family: inherit;
+      font-size: 11px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-tab.active {
+      background: rgba(0, 255, 136, 0.15);
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+
+    .mode-tab:hover:not(.active) {
+      background: rgba(48, 54, 61, 0.6);
+      color: #c9d1d9;
+    }
+
+    @media (max-width: 520px) {
+      .container {
+        padding: 16px;
+      }
+
+      .title {
+        font-size: 20px;
+        letter-spacing: 2px;
+      }
+
+      .data-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .control-label {
+        width: 60px;
+        font-size: 10px;
+      }
+
+      .control-value {
+        width: 60px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ========================================================================
+    // COLORS CONFIGURATION
+    // ========================================================================
+
+    const COLORS = {
+      sky: '#1a6eb5',
+      skyDark: '#0d4a7a',
+      ground: '#6b4423',
+      groundDark: '#3d2615',
+      horizon: '#ffffff',
+      bezel: '#1a1a1a',
+      bezelHighlight: '#2a2a2a',
+      textGreen: '#00ff00',
+      textCyan: '#00ffff',
+      textMagenta: '#ff00ff',
+      textWhite: '#ffffff',
+      textYellow: '#ffff00',
+      aircraft: '#ffff00',
+      slipBall: '#ffffff',
+    };
+
+    // ========================================================================
+    // ATTITUDE INDICATOR CANVAS COMPONENT
+    // ========================================================================
+
+    function AttitudeIndicatorCanvas({ pitch, roll, heading, airspeed, altitude, verticalSpeed, slip, baroSetting, waypoint, distance, size }) {
+      const canvasRef = useRef(null);
+      const animatedPitch = useRef(pitch);
+      const animatedRoll = useRef(roll);
+      const animatedHeading = useRef(heading);
+      const animatedSlip = useRef(slip);
+
+      const lerp = (a, b, t) => a + (b - a) * t;
+
+      const draw = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const radius = Math.min(w, h) / 2 - 10;
+
+        // Smooth animations
+        animatedPitch.current = lerp(animatedPitch.current, pitch, 0.15);
+        animatedRoll.current = lerp(animatedRoll.current, roll, 0.15);
+        animatedSlip.current = lerp(animatedSlip.current, slip, 0.12);
+        
+        // Handle heading wraparound
+        let headingDiff = heading - animatedHeading.current;
+        if (headingDiff > 180) headingDiff -= 360;
+        if (headingDiff < -180) headingDiff += 360;
+        animatedHeading.current += headingDiff * 0.15;
+
+        const p = animatedPitch.current;
+        const r = animatedRoll.current * Math.PI / 180;
+        const hdg = animatedHeading.current;
+
+        // Clear
+        ctx.fillStyle = COLORS.bezel;
+        ctx.fillRect(0, 0, w, h);
+
+        // Save state and clip to circle
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.88, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Draw attitude ball
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-r);
+
+        const pitchPixels = p * (radius / 30);
+
+        // Sky gradient
+        const skyGrad = ctx.createLinearGradient(0, -radius * 2, 0, pitchPixels);
+        skyGrad.addColorStop(0, COLORS.skyDark);
+        skyGrad.addColorStop(1, COLORS.sky);
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(-radius * 2, -radius * 2, radius * 4, radius * 2 + pitchPixels);
+
+        // Ground gradient
+        const groundGrad = ctx.createLinearGradient(0, pitchPixels, 0, radius * 2);
+        groundGrad.addColorStop(0, COLORS.ground);
+        groundGrad.addColorStop(1, COLORS.groundDark);
+        ctx.fillStyle = groundGrad;
+        ctx.fillRect(-radius * 2, pitchPixels, radius * 4, radius * 2);
+
+        // Horizon line
+        ctx.strokeStyle = COLORS.horizon;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-radius * 2, pitchPixels);
+        ctx.lineTo(radius * 2, pitchPixels);
+        ctx.stroke();
+
+        // Pitch ladder
+        ctx.font = `${radius * 0.06}px monospace`;
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let deg = -80; deg <= 80; deg += 10) {
+          if (deg === 0) continue;
+          const y = pitchPixels - deg * (radius / 30);
+          const lineWidth = Math.abs(deg) % 20 === 0 ? radius * 0.25 : radius * 0.15;
+          
+          ctx.strokeStyle = COLORS.textWhite;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-lineWidth, y);
+          ctx.lineTo(lineWidth, y);
+          ctx.stroke();
+
+          if (deg < 0) {
+            ctx.beginPath();
+            ctx.moveTo(-lineWidth, y);
+            ctx.lineTo(-lineWidth, y + 8);
+            ctx.moveTo(lineWidth, y);
+            ctx.lineTo(lineWidth, y + 8);
+            ctx.stroke();
+          }
+
+          if (Math.abs(deg) % 10 === 0) {
+            ctx.fillText(Math.abs(deg).toString(), -lineWidth - 15, y);
+            ctx.fillText(Math.abs(deg).toString(), lineWidth + 15, y);
+          }
+        }
+
+        ctx.restore();
+        ctx.restore();
+
+        // Bank angle indicator arc
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = radius * 0.06;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.82, Math.PI * 1.17, Math.PI * 1.83);
+        ctx.stroke();
+
+        const bankAngles = [
+          { deg: 0, len: 0.1 }, { deg: 10, len: 0.06 }, { deg: 20, len: 0.06 },
+          { deg: 30, len: 0.1 }, { deg: 45, len: 0.06 }, { deg: 60, len: 0.1 },
+        ];
+
+        ctx.strokeStyle = COLORS.textWhite;
+        ctx.lineWidth = 2;
+        
+        bankAngles.forEach(({ deg, len }) => {
+          [deg, -deg].forEach(angle => {
+            const rad = (-90 + angle) * Math.PI / 180;
+            const r1 = radius * 0.78;
+            const r2 = radius * (0.78 + len);
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(rad) * r1, Math.sin(rad) * r1);
+            ctx.lineTo(Math.cos(rad) * r2, Math.sin(rad) * r2);
+            ctx.stroke();
+          });
+        });
+
+        // Fixed sky pointer
+        ctx.fillStyle = COLORS.aircraft;
+        ctx.beginPath();
+        ctx.moveTo(0, -radius * 0.88);
+        ctx.lineTo(-8, -radius * 0.78);
+        ctx.lineTo(8, -radius * 0.78);
+        ctx.closePath();
+        ctx.fill();
+
+        // Moving bank pointer
+        ctx.save();
+        ctx.rotate(-r);
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.beginPath();
+        ctx.moveTo(0, -radius * 0.76);
+        ctx.lineTo(-6, -radius * 0.68);
+        ctx.lineTo(6, -radius * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.restore();
+
+        // Aircraft symbol
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = COLORS.aircraft;
+        ctx.fillStyle = COLORS.aircraft;
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.35, 0);
+        ctx.lineTo(-radius * 0.12, 0);
+        ctx.moveTo(radius * 0.12, 0);
+        ctx.lineTo(radius * 0.35, 0);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.35, 0);
+        ctx.lineTo(-radius * 0.35, 12);
+        ctx.moveTo(radius * 0.35, 0);
+        ctx.lineTo(radius * 0.35, 12);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Slip/skid indicator
+        ctx.save();
+        ctx.translate(cx, cy + radius * 0.55);
+        
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(-radius * 0.2, -8, radius * 0.4, 16);
+        
+        ctx.fillStyle = '#444';
+        ctx.fillRect(-radius * 0.06 - 2, -10, 4, 20);
+        ctx.fillRect(radius * 0.06 - 2, -10, 4, 20);
+        
+        const ballOffset = animatedSlip.current * radius * 0.12;
+        ctx.fillStyle = COLORS.slipBall;
+        ctx.beginPath();
+        ctx.arc(ballOffset, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+
+        // Compass rose
+        ctx.save();
+        ctx.translate(cx, cy - radius * 0.68);
+        
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.rotate(hdg * Math.PI / 180);
+        
+        const compassRadius = radius * 0.18;
+        ctx.font = `${radius * 0.055}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let i = 0; i < 36; i++) {
+          const deg = i * 10;
+          const rad = -deg * Math.PI / 180;
+          const isMajor = deg % 30 === 0;
+          
+          ctx.strokeStyle = COLORS.textWhite;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          const r1 = compassRadius * (isMajor ? 0.7 : 0.85);
+          ctx.moveTo(Math.sin(rad) * r1, -Math.cos(rad) * r1);
+          ctx.lineTo(Math.sin(rad) * compassRadius, -Math.cos(rad) * compassRadius);
+          ctx.stroke();
+
+          if (isMajor) {
+            let label = '';
+            if (deg === 0) label = 'N';
+            else if (deg === 90) label = 'E';
+            else if (deg === 180) label = 'S';
+            else if (deg === 270) label = 'W';
+            else label = (deg / 10).toString();
+
+            ctx.save();
+            ctx.translate(Math.sin(rad) * compassRadius * 0.5, -Math.cos(rad) * compassRadius * 0.5);
+            ctx.rotate(rad);
+            ctx.fillStyle = label === 'N' ? COLORS.textMagenta : COLORS.textWhite;
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+
+        ctx.fillStyle = COLORS.textMagenta;
+        ctx.beginPath();
+        ctx.moveTo(0, -radius * 0.2);
+        ctx.lineTo(-5, -radius * 0.14);
+        ctx.lineTo(5, -radius * 0.14);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.font = `${radius * 0.04}px monospace`;
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.fillText('GPS', -radius * 0.12, radius * 0.12);
+        ctx.fillText('TRK', radius * 0.12, radius * 0.12);
+
+        ctx.restore();
+
+        // Data displays
+        ctx.font = `bold ${radius * 0.09}px monospace`;
+        
+        // IAS
+        ctx.textAlign = 'left';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('IAS', cx - radius * 0.82, cy - radius * 0.35);
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.font = `bold ${radius * 0.11}px monospace`;
+        ctx.fillText(Math.round(airspeed).toString(), cx - radius * 0.82, cy - radius * 0.22);
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.06}px monospace`;
+        ctx.fillText('kts', cx - radius * 0.58, cy - radius * 0.22);
+
+        // ALT
+        ctx.textAlign = 'right';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('ALT', cx + radius * 0.82, cy - radius * 0.35);
+        ctx.fillStyle = COLORS.textCyan;
+        ctx.font = `bold ${radius * 0.11}px monospace`;
+        ctx.fillText(Math.round(altitude).toString(), cx + radius * 0.82, cy - radius * 0.22);
+
+        // DIST
+        ctx.textAlign = 'left';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('DIST', cx - radius * 0.82, cy - radius * 0.58);
+        ctx.fillStyle = COLORS.textMagenta;
+        ctx.font = `bold ${radius * 0.09}px monospace`;
+        ctx.fillText(distance.toFixed(1), cx - radius * 0.82, cy - radius * 0.46);
+
+        // SALT
+        ctx.textAlign = 'right';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('SALT', cx + radius * 0.82, cy - radius * 0.58);
+        ctx.fillStyle = COLORS.textCyan;
+        ctx.font = `bold ${radius * 0.08}px monospace`;
+        ctx.fillText('0000', cx + radius * 0.82, cy - radius * 0.46);
+
+        // WPT
+        ctx.textAlign = 'left';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('WPT', cx - radius * 0.82, cy + radius * 0.35);
+        ctx.fillStyle = COLORS.textMagenta;
+        ctx.font = `bold ${radius * 0.08}px monospace`;
+        ctx.fillText(waypoint, cx - radius * 0.82, cy + radius * 0.46);
+
+        // BARO
+        ctx.textAlign = 'right';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('BARO', cx + radius * 0.82, cy + radius * 0.35);
+        ctx.fillStyle = COLORS.textCyan;
+        ctx.font = `bold ${radius * 0.08}px monospace`;
+        ctx.fillText(baroSetting.toFixed(2), cx + radius * 0.82, cy + radius * 0.46);
+
+        // VS indicator
+        const vsX = cx + radius * 0.92;
+        const vsHeight = radius * 0.5;
+        
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(vsX - 8, cy - vsHeight / 2, 16, vsHeight);
+        
+        ctx.strokeStyle = COLORS.textWhite;
+        ctx.lineWidth = 1;
+        for (let i = -2; i <= 2; i++) {
+          const y = cy - (i / 2) * (vsHeight / 2) * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(vsX - 6, y);
+          ctx.lineTo(vsX + 6, y);
+          ctx.stroke();
+        }
+
+        const vsNormalized = Math.max(-2000, Math.min(2000, verticalSpeed)) / 2000;
+        const vsPointerY = cy - vsNormalized * (vsHeight / 2) * 0.8;
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.beginPath();
+        ctx.moveTo(vsX - 12, vsPointerY);
+        ctx.lineTo(vsX + 4, vsPointerY - 4);
+        ctx.lineTo(vsX + 4, vsPointerY + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.045}px monospace`;
+        ctx.textAlign = 'right';
+        ctx.fillText('VT', vsX - 2, cy - vsHeight / 2 - 8);
+
+        // Bottom labels
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.045}px monospace`;
+        ctx.fillText('MENU', cx - radius * 0.5, cy + radius * 0.68);
+        ctx.fillText('AoA', cx, cy + radius * 0.68);
+
+        // Status bar
+        ctx.fillStyle = 'rgba(26, 26, 26, 0.9)';
+        ctx.fillRect(cx - radius * 0.5, cy + radius * 0.72, radius, radius * 0.1);
+        
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.font = `${radius * 0.045}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText('3:3', cx - radius * 0.1, cy + radius * 0.78);
+        ctx.fillText('100%', cx + radius * 0.2, cy + radius * 0.78);
+        
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.fillRect(cx + radius * 0.35, cy + radius * 0.75, radius * 0.06, radius * 0.05);
+
+        // Bezel
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = radius * 0.08;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.96, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = radius * 0.04;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Bottom text
+        ctx.fillStyle = COLORS.textWhite;
+        ctx.font = `${radius * 0.07}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText('AV-30', cx - radius * 0.15, cy + radius * 0.92);
+        ctx.font = `${radius * 0.05}px monospace`;
+        ctx.fillText('PUSH-SET', cx + radius * 0.25, cy + radius * 0.92);
+
+      }, [pitch, roll, heading, airspeed, altitude, verticalSpeed, slip, baroSetting, waypoint, distance]);
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        let animationId;
+        const animate = () => {
+          draw();
+          animationId = requestAnimationFrame(animate);
+        };
+        animate();
+
+        return () => cancelAnimationFrame(animationId);
+      }, [draw]);
+
+      return (
+        <canvas
+          ref={canvasRef}
+          width={size * 2}
+          height={size * 2}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: '50%',
+          }}
+        />
+      );
+    }
+
+    // ========================================================================
+    // MAIN APP COMPONENT
+    // ========================================================================
+
+    function App() {
+      const [flightData, setFlightData] = useState({
+        pitch: 2.5,
+        roll: 0,
+        heading: 3,
+        airspeed: 75,
+        altitude: 14430,
+        verticalSpeed: 0,
+        slip: 0,
+        baroSetting: 29.92,
+        waypoint: 'KABQ',
+        distance: 18.6,
+      });
+
+      const [isAnimating, setIsAnimating] = useState(true);
+      const [animationMode, setAnimationMode] = useState('flight');
+
+      useEffect(() => {
+        if (!isAnimating) return;
+
+        let time = 0;
+        const interval = setInterval(() => {
+          time += 0.05;
+
+          if (animationMode === 'flight') {
+            // Realistic flight simulation
+            setFlightData(prev => ({
+              ...prev,
+              pitch: 2.5 + Math.sin(time * 0.3) * 8 + Math.sin(time * 0.7) * 3,
+              roll: Math.sin(time * 0.2) * 20 + Math.sin(time * 0.5) * 8,
+              heading: (prev.heading + 0.15 + Math.sin(time * 0.1) * 0.3 + 360) % 360,
+              airspeed: 75 + Math.sin(time * 0.4) * 15,
+              altitude: 14430 + Math.sin(time * 0.15) * 300,
+              verticalSpeed: Math.cos(time * 0.15) * 800,
+              slip: Math.sin(time * 0.25) * 0.4,
+              distance: Math.max(0, 18.6 - (time * 0.005)),
+            }));
+          } else if (animationMode === 'acrobatic') {
+            // Aggressive aerobatic maneuvers
+            setFlightData(prev => ({
+              ...prev,
+              pitch: Math.sin(time * 0.8) * 35,
+              roll: Math.sin(time * 0.5) * 55 + Math.cos(time * 0.3) * 20,
+              heading: (prev.heading + 1 + Math.sin(time * 0.2) * 2 + 360) % 360,
+              airspeed: 150 + Math.sin(time * 0.6) * 50,
+              altitude: 8000 + Math.sin(time * 0.3) * 1500,
+              verticalSpeed: Math.cos(time * 0.3) * 1800,
+              slip: Math.sin(time * 0.4) * 0.8,
+              distance: Math.max(0, 18.6 - (time * 0.01)),
+            }));
+          } else if (animationMode === 'hover') {
+            // Gentle hovering
+            setFlightData(prev => ({
+              ...prev,
+              pitch: Math.sin(time * 0.5) * 3,
+              roll: Math.sin(time * 0.4) * 4,
+              heading: prev.heading,
+              airspeed: 0,
+              altitude: 500 + Math.sin(time * 0.2) * 10,
+              verticalSpeed: Math.cos(time * 0.2) * 50,
+              slip: Math.sin(time * 0.3) * 0.1,
+              distance: 0,
+            }));
+          }
+        }, 50);
+
+        return () => clearInterval(interval);
+      }, [isAnimating, animationMode]);
+
+      const handleSliderChange = (key, value) => {
+        setIsAnimating(false);
+        setFlightData(prev => ({ ...prev, [key]: parseFloat(value) }));
+      };
+
+      const gaugeSize = Math.min(380, window.innerWidth - 48);
+
+      return (
+        <div className="container">
+          <div className="header">
+            <h1 className="title">3D Attitude Indicator</h1>
+            <p className="subtitle">AV-30 Style • Real-time Flight Data Visualization</p>
+            <div className="badge-row">
+              <span className="badge badge-react">React 18</span>
+              <span className="badge badge-canvas">Canvas 2D</span>
+              <span className="badge badge-realtime">60 FPS</span>
+            </div>
+          </div>
+
+          <div className="mode-tabs">
+            <button 
+              className={`mode-tab ${animationMode === 'flight' ? 'active' : ''}`}
+              onClick={() => { setAnimationMode('flight'); setIsAnimating(true); }}
+            >
+              ✈️ Flight
+            </button>
+            <button 
+              className={`mode-tab ${animationMode === 'acrobatic' ? 'active' : ''}`}
+              onClick={() => { setAnimationMode('acrobatic'); setIsAnimating(true); }}
+            >
+              🔄 Acrobatic
+            </button>
+            <button 
+              className={`mode-tab ${animationMode === 'hover' ? 'active' : ''}`}
+              onClick={() => { setAnimationMode('hover'); setIsAnimating(true); }}
+            >
+              🚁 Hover
+            </button>
+          </div>
+
+          <div className="gauge-wrapper">
+            <AttitudeIndicatorCanvas {...flightData} size={gaugeSize} />
+          </div>
+
+          <div className="data-grid">
+            <div className="data-item">
+              <div className="data-label">Pitch</div>
+              <div className="data-value green">{flightData.pitch.toFixed(1)}°</div>
+            </div>
+            <div className="data-item">
+              <div className="data-label">Roll</div>
+              <div className="data-value green">{flightData.roll.toFixed(1)}°</div>
+            </div>
+            <div className="data-item">
+              <div className="data-label">Heading</div>
+              <div className="data-value yellow">{flightData.heading.toFixed(0)}°</div>
+            </div>
+            <div className="data-item">
+              <div className="data-label">Airspeed</div>
+              <div className="data-value green">{flightData.airspeed.toFixed(0)} kts</div>
+            </div>
+            <div className="data-item">
+              <div className="data-label">Altitude</div>
+              <div className="data-value cyan">{flightData.altitude.toFixed(0)} ft</div>
+            </div>
+            <div className="data-item">
+              <div className="data-label">V/S</div>
+              <div className="data-value magenta">{flightData.verticalSpeed.toFixed(0)} fpm</div>
+            </div>
+          </div>
+
+          <div className="controls">
+            <div className="controls-header">
+              <span className="controls-title">Manual Controls</span>
+              <button
+                className={`toggle-btn ${isAnimating ? 'active' : 'inactive'}`}
+                onClick={() => setIsAnimating(!isAnimating)}
+              >
+                {isAnimating ? '⏹ Stop' : '▶ Animate'}
+              </button>
+            </div>
+
+            {[
+              { key: 'pitch', label: 'Pitch', min: -45, max: 45, unit: '°' },
+              { key: 'roll', label: 'Roll', min: -60, max: 60, unit: '°' },
+              { key: 'heading', label: 'Heading', min: 0, max: 360, unit: '°' },
+              { key: 'airspeed', label: 'Airspeed', min: 0, max: 250, unit: ' kts' },
+              { key: 'altitude', label: 'Altitude', min: 0, max: 35000, unit: ' ft' },
+              { key: 'slip', label: 'Slip', min: -1, max: 1, unit: '' },
+            ].map(({ key, label, min, max, unit }) => (
+              <div key={key} className="control-row">
+                <span className="control-label">{label}</span>
+                <input
+                  type="range"
+                  className="control-slider"
+                  min={min}
+                  max={max}
+                  step={key === 'slip' ? 0.05 : (key === 'altitude' ? 100 : 0.5)}
+                  value={flightData[key]}
+                  onChange={(e) => handleSliderChange(key, e.target.value)}
+                />
+                <span className="control-value">
+                  {key === 'slip' ? flightData[key].toFixed(2) : 
+                   key === 'heading' ? flightData[key].toFixed(0) : 
+                   flightData[key].toFixed(1)}{unit}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="footer">
+            <a 
+              href="https://github.com/MushroomFleet/3D-attitude-indicator-JSX" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              <svg className="github-icon" viewBox="0 0 16 16">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              View on GitHub
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
